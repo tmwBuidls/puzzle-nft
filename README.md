@@ -6,6 +6,6 @@ Built using hardhat and waffle. My first attempt at a proper smart contract beyo
 
 ## Commands
 
-To run: `npm run run`
-To deploy to Rinkeby: `npm run deploy`
-To test: `npm run test`
+- To run: `npm run run`
+- To deploy to Rinkeby: `npm run deploy`
+- To test: `npm run test`
