@@ -9,4 +9,4 @@
 - Review visibility (private/ public etc)
 - Review data considerations
 - Solidity linting etc.
-- Do I need everything from ERC721 extensions?
+- Look into upgradeable contract
