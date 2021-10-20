@@ -1,5 +1,4 @@
 # TODO
-- Re-implement ether payment and tests
 - Test the baseURI and tokenURI logic
 - Decide what owner functions I may want, e.g:
     - Change puzzle prices

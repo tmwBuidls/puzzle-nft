@@ -37,7 +37,7 @@ contract Puzzle is ERC721, Ownable {
     }
 
     // Minting
-    function findPuzzlePieces(uint256 puzzleId, uint256 num) public {
+    function findPuzzlePieces(uint256 puzzleId, uint256 num) public payable {
         require(_puzzleFinished[puzzleId] != true, "Puzzle has been finished");
         require(puzzleId < _puzzleURIs.length, "Puzzle does not exist");
         require(
@@ -45,7 +45,7 @@ contract Puzzle is ERC721, Ownable {
                 _totalPuzzlePieces[puzzleId],
             "Exceeds the total pieces"
         );
-        // require(msg.value >= _puzzlePrice[puzzle] * num, "Ether sent not correct");
+        require(msg.value >= _puzzlePrice[puzzleId] * num, "Ether sent not correct");
 
         // Get how many pieces this address owns
         uint256 balance = _ownedPuzzlePieces[msg.sender][puzzleId];

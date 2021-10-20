@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const { setup } = require("./utils.js");
+const { ethers } = require("hardhat");
 
 
 describe("Puzzle", function () {
@@ -28,20 +29,23 @@ describe("Puzzle", function () {
             expect(await token.balanceOf(owner.address)).to.equal(2);
         });
 
-
         it("Should not mint if reached maximum for address", async function () {
             await token.findPuzzlePieces(0, 3);
             await expect(token.findPuzzlePieces(0, 2))
-                .to.be.revertedWith("You cannot find more than 3 pieces");
+                .to.be.revertedWith("Cannot find more than 3 pieces");
         });
 
         it("Should not mint if no pieces available", async function () {
-            await token.addPuzzle("test", 1, 1);
+            await token.addPuzzle("test", 1, 0);
             await expect(token.findPuzzlePieces(1, 2))
-                .to.be.revertedWith("This would exceed the total amount of pieces");
+                .to.be.revertedWith("Exceeds the total pieces");
         });
 
-        it("Should not mint if ether is too low");
+        it("Should not mint if ether is too low", async function () {
+            await token.addPuzzle("test", 100, 1);
+            await expect(token.findPuzzlePieces(1, 1), { value: ethers.utils.parseEther("0.5") })
+                .to.be.revertedWith("Ether sent not correct");
+        });
 
         it("Should not mint if puzzle does not exist", async function () {
             await expect(token.findPuzzlePieces(1, 3))
@@ -49,7 +53,7 @@ describe("Puzzle", function () {
         });
 
         it("Should not mint after puzzle has been finished", async function () {
-            await token.addPuzzle("test", 1, 1);
+            await token.addPuzzle("test", 1, 0);
             await token.findPuzzlePieces(1, 1);
             await token.finishPuzzle(1);
             await expect(token.findPuzzlePieces(1, 1))
@@ -58,9 +62,10 @@ describe("Puzzle", function () {
 
     });
 
+
     describe("Burning", async function () {
         it("Should burn pieces and mint puzzle if all are owned by address", async function () {
-            await token.addPuzzle("test", 2, 1);
+            await token.addPuzzle("test", 2, 0);
             await token.findPuzzlePieces(1, 2);
 
             await expect(token.finishPuzzle(1))
@@ -73,7 +78,7 @@ describe("Puzzle", function () {
 
         it("Should mint puzzle after token has been transferred to", async function () {
             // The puzzle has two pieces
-            await token.addPuzzle("test", 2, 1);
+            await token.addPuzzle("test", 2, 0);
 
             // Owner has one piece
             await token.findPuzzlePieces(1, 1);
@@ -93,22 +98,22 @@ describe("Puzzle", function () {
 
         it("Should not burn if not all pieces are owned by address", async function () {
             // The puzzle has two pieces
-            await token.addPuzzle("test", 2, 1);
+            await token.addPuzzle("test", 2, 0);
 
             // Owner has one piece
             await token.findPuzzlePieces(1, 1);
             await expect(token.finishPuzzle(1))
-                .to.be.revertedWith("You have not collected all the pieces");
+                .to.be.revertedWith("Not collected all the pieces");
 
             // Addr1 has the other piece
             await token.connect(addr1).findPuzzlePieces(1, 1);
             await expect(token.finishPuzzle(1))
-                .to.be.revertedWith("You have not collected all the pieces");
+                .to.be.revertedWith("Not collected all the pieces");
         });
 
         it("Should not burn after token has been transferred away", async function () {
             // The puzzle has two pieces
-            await token.addPuzzle("test", 2, 1);
+            await token.addPuzzle("test", 2, 0);
 
             // Owner starts with both pieces
             await token.findPuzzlePieces(1, 2);
@@ -119,11 +124,11 @@ describe("Puzzle", function () {
 
             // Owner now does not have all the pieces
             await expect(token.finishPuzzle(1))
-                .to.be.revertedWith("You have not collected all the pieces");
+                .to.be.revertedWith("Not collected all the pieces");
         });
 
         it("Should not mint puzzle if already finished ", async function () {
-            await token.addPuzzle("test", 2, 1);
+            await token.addPuzzle("test", 2, 0);
             await token.findPuzzlePieces(1, 2);
             await token.finishPuzzle(1);
             await expect(token.finishPuzzle(1))

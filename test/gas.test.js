@@ -13,7 +13,7 @@ describe("Gas Tests", function () {
         const Puzzle = await ethers.getContractFactory("Puzzle");
         token = await Puzzle.deploy("uri");
         await token.deployed();
-        await token.addPuzzle("test", 1, 1);
+        await token.addPuzzle("test", 1, 0);
 
         [owner] = await ethers.getSigners();
     })
