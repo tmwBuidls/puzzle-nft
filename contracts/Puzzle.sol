@@ -43,7 +43,7 @@ contract Puzzle is ERC721, Ownable {
         require(
             _puzzleToPiece[puzzleId].length + num <=
                 _totalPuzzlePieces[puzzleId],
-            "This would exceed the total amount of pieces"
+            "Exceeds the total pieces"
         );
         // require(msg.value >= _puzzlePrice[puzzle] * num, "Ether sent not correct");
 
@@ -51,7 +51,7 @@ contract Puzzle is ERC721, Ownable {
         uint256 balance = _ownedPuzzlePieces[msg.sender][puzzleId];
         require(
             balance + num <= _maxPiecesPerOwner,
-            "You cannot find more than 3 pieces"
+            "Cannot find more than 3 pieces"
         );
 
         // Get the current tokenId.
@@ -78,7 +78,7 @@ contract Puzzle is ERC721, Ownable {
         uint256 balance = _ownedPuzzlePieces[msg.sender][puzzleId];
         require(
             balance == _totalPuzzlePieces[puzzleId],
-            "You have not collected all the pieces"
+            "Not collected all the pieces"
         );
 
         // Burn all the puzzle pieces of the owner

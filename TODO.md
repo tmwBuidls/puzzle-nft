@@ -8,5 +8,5 @@
     - Pause/ start sale
 - Review visibility (private/ public etc)
 - Review data considerations
-- Solidity linting etc.
 - Look into upgradeable contract
+- Fix coverage and gas computation on tests to (not) use fixture properly
