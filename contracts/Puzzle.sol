@@ -7,20 +7,6 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-// TODO
-/**
-  - Setup final puzzle token URI properly
-  - Re-implement ether payment and tests
-  - Decide what owner functions I may want, e.g:
-    - Change puzzle prices
-    - Change token URIs and Base URI
-    - Change max tokens per person
-    - Pause/ start sale
-  - Review visibility (private/ public etc)
-  - Review data consideration
-  - Solidity linting etc.
-  - Do I need everything from ERC721 extensions?
-*/
 
 contract Puzzle is ERC721Enumerable, Ownable {
     uint256 private _maxPiecesPerOwner = 3;
@@ -93,6 +79,7 @@ contract Puzzle is ERC721Enumerable, Ownable {
         _puzzleFinished[puzzleId] = true;
 
         // Issue the final puzzle
+        // TODO - set the token uri.
         _safeMint(msg.sender, totalSupply());
 
         emit PuzzleFinished(msg.sender, puzzleId);
