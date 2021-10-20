@@ -2,13 +2,19 @@
 
 pragma solidity 0.8.9;
 
-import "@openzeppelin/contracts/utils/Strings.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 
+contract Puzzle is ERC721, Ownable {
+    // Counter for token IDs
+    using Counters for Counters.Counter;
+    Counters.Counter private _tokenIds;
 
-contract Puzzle is ERC721Enumerable, Ownable {
+    // Optional mapping for token URIs
+    mapping(uint256 => string) private _tokenURIs;
+    string private _baseTokenURI;
+
     uint256 private _maxPiecesPerOwner = 3;
 
     string[] private _puzzleURIs; // Final puzzle URIs
@@ -26,7 +32,9 @@ contract Puzzle is ERC721Enumerable, Ownable {
     event PuzzleFinished(address sender, uint256 puzzleId);
     event NewPuzzleAdded(address sender, uint256 puzzleId);
 
-    constructor() ERC721("Puzzle", "PIECE") {}
+    constructor(string memory baseURI) ERC721("Puzzle", "PIECE") {
+        setBaseURI(baseURI);
+    }
 
     // Minting
     function findPuzzlePieces(uint256 puzzleId, uint256 num) public {
@@ -46,16 +54,19 @@ contract Puzzle is ERC721Enumerable, Ownable {
             "You cannot find more than 3 pieces"
         );
 
-        // Get the total pieces to use as token id
-        uint256 totalSupply = totalSupply();
+        // Get the current tokenId.
+        uint256 newItemId = _tokenIds.current();
 
         for (uint256 i; i < num; i++) {
-            uint256 tokenId = totalSupply + i;
+            uint256 tokenId = newItemId + i;
 
             // Map the token to puzzle and then mint
             _pieceToPuzzle[tokenId] = puzzleId;
             _puzzleToPiece[puzzleId].push(tokenId);
             _safeMint(msg.sender, tokenId);
+
+            // Increment the counter for when the next NFT is minted.
+            _tokenIds.increment();
 
             emit NewPuzzlePieceFound(msg.sender, puzzleId, tokenId);
         }
@@ -79,8 +90,10 @@ contract Puzzle is ERC721Enumerable, Ownable {
         _puzzleFinished[puzzleId] = true;
 
         // Issue the final puzzle
-        // TODO - set the token uri.
-        _safeMint(msg.sender, totalSupply());
+        uint256 newItemId = _tokenIds.current();
+        _safeMint(msg.sender, newItemId);
+        _setTokenURI(newItemId, _puzzleURIs[puzzleId]);
+        _tokenIds.increment();
 
         emit PuzzleFinished(msg.sender, puzzleId);
     }
@@ -114,7 +127,11 @@ contract Puzzle is ERC721Enumerable, Ownable {
         _ownedPuzzlePieces[owner][_pieceToPuzzle[tokenId]] += 1;
     }
 
-    // Owner commands
+    function totalSupply() public view returns (uint256) {
+        return _tokenIds.current();
+    }
+
+    // Owner functions
 
     function addPuzzle(
         string memory puzzleURI,
@@ -130,5 +147,52 @@ contract Puzzle is ERC721Enumerable, Ownable {
         _puzzlePrice[puzzleId] = price;
 
         emit NewPuzzleAdded(msg.sender, puzzleId);
+    }
+
+    function setBaseURI(string memory baseURI) public onlyOwner {
+        _baseTokenURI = baseURI;
+    }
+
+    /**
+     * @dev Sets `_tokenURI` as the tokenURI of `tokenId`.
+     */
+    function _setTokenURI(uint256 tokenId, string memory _tokenURI)
+        public
+        onlyOwner
+    {
+        _tokenURIs[tokenId] = _tokenURI;
+    }
+
+    // Overridden functions
+
+    /**
+     * @dev This is a variation of what is found in {ERC721URIStorage-tokenURI}.
+     * We never concatenate the tokenURI with the baseURI.
+     * If the tokenURI is set we just use that.
+     */
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        virtual
+        override
+        returns (string memory)
+    {
+        require(_exists(tokenId), "URI query for nonexistent token");
+        string memory _tokenURI = _tokenURIs[tokenId];
+
+        // If both are set, concatenate the baseURI and tokenURI (via abi.encodePacked).
+        if (bytes(_tokenURI).length > 0) {
+            return _tokenURI;
+        }
+
+        return super.tokenURI(tokenId);
+    }
+
+    /**
+     * @dev Base URI for computing {tokenURI}. If set, the resulting URI for each
+     * token will be the concatenation of the `baseURI` and the `tokenId`.
+     */
+    function _baseURI() internal view virtual override returns (string memory) {
+        return _baseTokenURI;
     }
 }

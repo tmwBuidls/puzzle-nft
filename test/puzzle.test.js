@@ -22,8 +22,6 @@ describe("Puzzle", function () {
         });
     })
 
-
-
     describe("Minting", async function () {
         it("Should mint multiple", async function () {
             await token.findPuzzlePieces(0, 2);
@@ -59,7 +57,6 @@ describe("Puzzle", function () {
         });
 
     });
-
 
     describe("Burning", async function () {
         it("Should burn pieces and mint puzzle if all are owned by address", async function () {
