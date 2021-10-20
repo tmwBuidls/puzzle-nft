@@ -29,6 +29,15 @@ describe("Puzzle", function () {
             expect(await token.balanceOf(owner.address)).to.equal(2);
         });
 
+        it("Should set tokenURI to baseURI + tokenId", async function() {
+            const baseURI = "/this-puzzle/";
+            await token.setBaseURI(baseURI);
+    
+            await token.findPuzzlePieces(0, 1);
+            const tokenId = await token.totalSupply() - 1;    
+            expect(await token.tokenURI(tokenId)).to.equal(baseURI + tokenId);
+        });
+
         it("Should not mint if reached maximum for address", async function () {
             await token.findPuzzlePieces(0, 3);
             await expect(token.findPuzzlePieces(0, 2))
@@ -65,7 +74,8 @@ describe("Puzzle", function () {
 
     describe("Burning", async function () {
         it("Should burn pieces and mint puzzle if all are owned by address", async function () {
-            await token.addPuzzle("test", 2, 0);
+            const puzzleURI = "puzzleURI/"
+            await token.addPuzzle(puzzleURI, 2, 0);
             await token.findPuzzlePieces(1, 2);
 
             await expect(token.finishPuzzle(1))
@@ -74,6 +84,10 @@ describe("Puzzle", function () {
 
             // Burns the two pieces and issues the final puzzle token.
             expect(await token.balanceOf(owner.address)).to.equal(1);
+
+            // Token URI equals puzzle URI
+            const tokenId = await token.totalSupply() - 1;
+            expect(await token.tokenURI(tokenId)).to.equal(puzzleURI);
         });
 
         it("Should mint puzzle after token has been transferred to", async function () {

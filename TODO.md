@@ -1,5 +1,4 @@
 # TODO
-- Test the baseURI and tokenURI logic
 - Decide what owner functions I may want, e.g:
     - Change puzzle prices
     - Change token URIs and Base URI

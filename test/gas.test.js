@@ -24,7 +24,7 @@ describe("Gas Tests", function () {
     });
 
     it("Add puzzle", async function () {
-        await expect(token.addPuzzle("test", 100, 1))
+        await expect(token.addPuzzle("test", 100, 0))
             .to.emit(token, 'NewPuzzleAdded')
             .withArgs(owner.address, 1);
     });
@@ -34,4 +34,5 @@ describe("Gas Tests", function () {
             .to.emit(token, "PuzzleFinished")
             .withArgs(owner.address, 0);
     });
+
 });
