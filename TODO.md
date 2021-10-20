@@ -1,0 +1,12 @@
+# TODO
+- Setup final puzzle token URI properly
+- Re-implement ether payment and tests
+- Decide what owner functions I may want, e.g:
+    - Change puzzle prices
+    - Change token URIs and Base URI
+    - Change max tokens per person/ reset it for future sales
+    - Pause/ start sale
+- Review visibility (private/ public etc)
+- Review data considerations
+- Solidity linting etc.
+- Do I need everything from ERC721 extensions?
