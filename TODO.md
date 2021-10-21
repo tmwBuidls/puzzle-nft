@@ -1,10 +1,2 @@
 # TODO
-- Decide what owner functions I may want, e.g:
-    - Change puzzle prices
-    - Change token URIs and Base URI
-    - Change max tokens per person/ reset it for future sales
-    - Pause/ start sale
-- Review visibility (private/ public etc)
-- Review data considerations
-- Look into upgradeable contract
 - Fix coverage and gas computation on tests to (not) use fixture properly

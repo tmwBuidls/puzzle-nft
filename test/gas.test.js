@@ -14,6 +14,7 @@ describe("Gas Tests", function () {
         token = await Puzzle.deploy("uri");
         await token.deployed();
         await token.addPuzzle("test", 1, 0);
+        await token.activatePuzzle(0, true);
 
         [owner] = await ethers.getSigners();
     })

@@ -11,21 +11,21 @@ contract Puzzle is ERC721, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
+    string private _baseTokenURI;
     // Optional mapping for token URIs
     mapping(uint256 => string) private _tokenURIs;
-    string private _baseTokenURI;
 
-    uint256 private _maxPiecesPerOwner = 3;
-
-    string[] private _puzzleURIs; // Final puzzle URIs
-    mapping(uint256 => bool) private _puzzleFinished;
-
-    mapping(uint256 => uint256) private _totalPuzzlePieces; // Total puzzle pieces
-    mapping(uint256 => uint256[]) private _puzzleToPiece; // Puzzle pieces minted
-    mapping(uint256 => uint256) private _puzzlePrice; // Price of the puzzle pieces
-
-    mapping(address => mapping(uint256 => uint256)) private _ownedPuzzlePieces; // How many pieces someone owns by puzzle
-    mapping(uint256 => uint256) private _pieceToPuzzle; // Used to map tokens to puzzles
+    uint256 public maxPiecesPerOwner = 3;
+    // Final puzzle URIs
+    string[] private _puzzleURIs;
+    mapping(uint256 => bool) public puzzleFinished;
+    mapping(uint256 => bool) public puzzleSaleActive;
+    mapping(uint256 => uint256) public puzzlePrice;
+    mapping(uint256 => uint256) public totalPuzzlePieces;
+    mapping(uint256 => uint256[]) public puzzleToPiece;
+    mapping(uint256 => uint256) public pieceToPuzzle;
+    // How many pieces someone owns by puzzle
+    mapping(address => mapping(uint256 => uint256)) private _ownedPuzzlePieces;
 
     // Events
     event NewPuzzlePieceFound(address sender, uint256 puzzle, uint256 tokenId);
@@ -36,21 +36,27 @@ contract Puzzle is ERC721, Ownable {
         setBaseURI(baseURI);
     }
 
-    // Minting
+    /**
+     * @dev Main minting function.
+     * Takes a `puzzleId` and a `num` of tokens to mint.
+     */
     function findPuzzlePieces(uint256 puzzleId, uint256 num) public payable {
-        require(_puzzleFinished[puzzleId] != true, "Puzzle has been finished");
         require(puzzleId < _puzzleURIs.length, "Puzzle does not exist");
+        require(puzzleSaleActive[puzzleId] == true, "Puzzle sale not active");
+        require(puzzleFinished[puzzleId] != true, "Puzzle has been finished");
         require(
-            _puzzleToPiece[puzzleId].length + num <=
-                _totalPuzzlePieces[puzzleId],
+            puzzleToPiece[puzzleId].length + num <= totalPuzzlePieces[puzzleId],
             "Exceeds the total pieces"
         );
-        require(msg.value >= _puzzlePrice[puzzleId] * num, "Ether sent not correct");
+        require(
+            msg.value >= puzzlePrice[puzzleId] * num,
+            "Ether sent not correct"
+        );
 
         // Get how many pieces this address owns
         uint256 balance = _ownedPuzzlePieces[msg.sender][puzzleId];
         require(
-            balance + num <= _maxPiecesPerOwner,
+            balance + num <= maxPiecesPerOwner,
             "Cannot find more than 3 pieces"
         );
 
@@ -61,8 +67,8 @@ contract Puzzle is ERC721, Ownable {
             uint256 tokenId = newItemId + i;
 
             // Map the token to puzzle and then mint
-            _pieceToPuzzle[tokenId] = puzzleId;
-            _puzzleToPiece[puzzleId].push(tokenId);
+            pieceToPuzzle[tokenId] = puzzleId;
+            puzzleToPiece[puzzleId].push(tokenId);
             _safeMint(msg.sender, tokenId);
 
             // Increment the counter for when the next NFT is minted.
@@ -72,33 +78,116 @@ contract Puzzle is ERC721, Ownable {
         }
     }
 
-    // Finishing/ burning
+    /**
+     * @dev Main burning function.
+     * Takes a `puzzleId` and checks whether the sender has all the pieces.
+     * If they do:
+     * - Burns all that puzzle's tokens.
+     * - Mints the final full puzzle.
+     */
     function finishPuzzle(uint256 puzzleId) public {
-        require(_puzzleFinished[puzzleId] != true, "Puzzle has been finished");
+        require(puzzleFinished[puzzleId] != true, "Puzzle has been finished");
         uint256 balance = _ownedPuzzlePieces[msg.sender][puzzleId];
         require(
-            balance == _totalPuzzlePieces[puzzleId],
+            balance == totalPuzzlePieces[puzzleId],
             "Not collected all the pieces"
         );
 
         // Burn all the puzzle pieces of the owner
         for (uint256 i; i < balance; i++) {
-            uint256 tokenId = _puzzleToPiece[puzzleId][i];
+            uint256 tokenId = puzzleToPiece[puzzleId][i];
             _burn(tokenId);
         }
 
-        _puzzleFinished[puzzleId] = true;
+        puzzleFinished[puzzleId] = true;
 
         // Issue the final puzzle
         uint256 newItemId = _tokenIds.current();
         _safeMint(msg.sender, newItemId);
-        _setTokenURI(newItemId, _puzzleURIs[puzzleId]);
+        setTokenURI(newItemId, _puzzleURIs[puzzleId]);
         _tokenIds.increment();
 
         emit PuzzleFinished(msg.sender, puzzleId);
     }
 
-    // Before token transfer hook
+    function totalSupply() public view returns (uint256) {
+        return _tokenIds.current();
+    }
+
+    function myPuzzlePieces(uint256 puzzleId) public view returns (uint256) {
+        return _ownedPuzzlePieces[msg.sender][puzzleId];
+    }
+
+    // onlyOwner ---------------------------
+
+    function addPuzzle(
+        string memory puzzleURI,
+        uint256 puzzlePieces,
+        uint256 price
+    ) public onlyOwner {
+        // Add puzzle URI and get the id
+        _puzzleURIs.push(puzzleURI);
+        uint256 puzzleId = _puzzleURIs.length - 1;
+
+        // Set the total puzzle pieces and price
+        totalPuzzlePieces[puzzleId] = puzzlePieces;
+        puzzlePrice[puzzleId] = price;
+
+        emit NewPuzzleAdded(msg.sender, puzzleId);
+    }
+
+    function activatePuzzle(uint256 puzzleId, bool status) public onlyOwner {
+        puzzleSaleActive[puzzleId] = status;
+    }
+
+    function setBaseURI(string memory baseURI) public onlyOwner {
+        _baseTokenURI = baseURI;
+    }
+
+    /**
+     * @dev Sets `_tokenURI` as the tokenURI of `tokenId`.
+     */
+    function setTokenURI(uint256 tokenId, string memory _tokenURI)
+        public
+        onlyOwner
+    {
+        _tokenURIs[tokenId] = _tokenURI;
+    }
+
+    function setPuzzlePrice(uint256 puzzleId, uint256 price) public onlyOwner {
+        puzzlePrice[puzzleId] = price;
+    }
+
+    function setMaxPiecesPerOwner(uint256 num) public onlyOwner {
+        maxPiecesPerOwner = num;
+    }
+
+    // Private ---------------------------
+
+    function removePuzzlePieceFromOwner(address owner, uint256 tokenId)
+        private
+    {
+        _ownedPuzzlePieces[owner][pieceToPuzzle[tokenId]] -= 1;
+    }
+
+    function addPuzzlePieceToOwner(address owner, uint256 tokenId) private {
+        _ownedPuzzlePieces[owner][pieceToPuzzle[tokenId]] += 1;
+    }
+
+    // Overrides ---------------------------
+
+    /**
+     * @dev Hook that is called before any token transfer. This includes minting
+     * and burning.
+     *
+     * Calling conditions:
+     *
+     * - When `from` and `to` are both non-zero, ``from``'s `tokenId` will be
+     * transferred to `to`.
+     * - When `from` is zero, `tokenId` will be minted for `to`.
+     * - When `to` is zero, ``from``'s `tokenId` will be burned.
+     * - `from` and `to` are never both zero.
+     */
     function _beforeTokenTransfer(
         address from,
         address to,
@@ -117,53 +206,13 @@ contract Puzzle is ERC721, Ownable {
         }
     }
 
-    function removePuzzlePieceFromOwner(address owner, uint256 tokenId)
-        private
-    {
-        _ownedPuzzlePieces[owner][_pieceToPuzzle[tokenId]] -= 1;
-    }
-
-    function addPuzzlePieceToOwner(address owner, uint256 tokenId) private {
-        _ownedPuzzlePieces[owner][_pieceToPuzzle[tokenId]] += 1;
-    }
-
-    function totalSupply() public view returns (uint256) {
-        return _tokenIds.current();
-    }
-
-    // Owner functions
-
-    function addPuzzle(
-        string memory puzzleURI,
-        uint256 puzzlePieces,
-        uint256 price
-    ) public onlyOwner {
-        // Add puzzle URI and get the id
-        _puzzleURIs.push(puzzleURI);
-        uint256 puzzleId = _puzzleURIs.length - 1;
-
-        // Set the total puzzle pieces and price
-        _totalPuzzlePieces[puzzleId] = puzzlePieces;
-        _puzzlePrice[puzzleId] = price;
-
-        emit NewPuzzleAdded(msg.sender, puzzleId);
-    }
-
-    function setBaseURI(string memory baseURI) public onlyOwner {
-        _baseTokenURI = baseURI;
-    }
-
     /**
-     * @dev Sets `_tokenURI` as the tokenURI of `tokenId`.
+     * @dev Base URI for computing {tokenURI}. If set, the resulting URI for each
+     * token will be the concatenation of the `baseURI` and the `tokenId`.
      */
-    function _setTokenURI(uint256 tokenId, string memory _tokenURI)
-        public
-        onlyOwner
-    {
-        _tokenURIs[tokenId] = _tokenURI;
+    function _baseURI() internal view virtual override returns (string memory) {
+        return _baseTokenURI;
     }
-
-    // Overridden functions
 
     /**
      * @dev This is a variation of what is found in {ERC721URIStorage-tokenURI}.
@@ -186,13 +235,5 @@ contract Puzzle is ERC721, Ownable {
         }
 
         return super.tokenURI(tokenId);
-    }
-
-    /**
-     * @dev Base URI for computing {tokenURI}. If set, the resulting URI for each
-     * token will be the concatenation of the `baseURI` and the `tokenId`.
-     */
-    function _baseURI() internal view virtual override returns (string memory) {
-        return _baseTokenURI;
     }
 }

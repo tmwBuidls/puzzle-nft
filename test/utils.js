@@ -9,6 +9,7 @@ async function fixture([owner, addr1, addr2], provider) {
 async function setup() {
     const contract = await loadFixture(fixture);
     await contract.token.addPuzzle("test", 100, 0);
+    await contract.token.activatePuzzle(0, true);
     return contract;
 }
 
